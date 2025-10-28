@@ -18,7 +18,8 @@ using namespace vex;
 competition Competition;
 
 // define your global instances of motors and other devices here
-
+bool blueDetected = false;
+bool redDetected = false;
 /*---------------------------------------------------------------------------*/
 /*                          Pre-Autonomous Functions                         */
 /*                                                                           */
@@ -32,6 +33,16 @@ competition Competition;
 void pre_auton(void) {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
+  Brain.Screen.print("Calibrating Inertial...");
+  InertialSensor.calibrate(2);
+  BackLeftMotor.setBrake(brake);
+  BackRightMotor.setBrake(brake);
+  FrontLeftMotor.setBrake(brake);
+  FrontRightMotor.setBrake(brake);
+  LeftDriveSmart.setStopping(brake);
+  RightDriveSmart.setStopping(brake);
+  Brain.Screen.clearScreen();
+
 
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...
@@ -48,9 +59,10 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  // ..........................................................................
-  // Insert autonomous user code here.
-  // ..........................................................................
+      // Drivetrain.driveFor(300, mm);
+      Drivetrain.setDriveVelocity(50, percentUnits::pct);
+      Drivetrain.setTurnVelocity(50, percentUnits::pct);
+      Drivetrain.turnFor(90, degrees);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -74,6 +86,55 @@ void usercontrol(void) {
     // Insert user code here. This is where you use the joystick values to
     // update your motors, etc.
     // ........................................................................
+
+
+    // Vision & Heading Display
+    double hue = Optical.hue();
+    Brain.Screen.setCursor(1,1);
+    Brain.Screen.print(Optical.color());
+  if(Optical.color() >= 16700000 && Optical.color() <= 16720000){
+      Brain.Screen.setCursor(2,1);
+      Brain.Screen.print("Red Detected");
+      redDetected = true;
+      blueDetected = false;
+  }
+  else if(Optical.color() == 255 || Optical.color() == 65535){
+      Brain.Screen.setCursor(2,1);
+      Brain.Screen.print("Blue Detected");
+      blueDetected = true;
+      redDetected = false;
+  }
+  else{
+    redDetected = false;
+    blueDetected = false;
+  }
+  Brain.Screen.setCursor(4,1);
+  Brain.Screen.print("Heading: %.2f", InertialSensor.heading());
+  wait(200,msec);
+
+    Brain.Screen.clearScreen();
+
+    // Drive & Control
+    Drivetrain.arcade(Controller.Axis1.position(), Controller.Axis3.position());    
+    if(Controller.ButtonR1.pressing()){
+      IntakeMotorGroup.spin(forward, 100, percentUnits::pct);
+    }
+    else if(Controller.ButtonR2.pressing()){
+      IntakeMotorGroup.spin(reverse, 100, percentUnits::pct);
+    }
+    else{
+      IntakeMotorGroup.stop();
+    }
+
+    if(Controller.ButtonL1.pressing()){
+      ElevatorMotorGroup.spin(forward, 100, percentUnits::pct);
+    }
+    else if(Controller.ButtonL2.pressing()){
+      ElevatorMotorGroup.spin(reverse, 100, percentUnits::pct);
+    }
+    else{
+      ElevatorMotorGroup.stop();
+    }
 
     wait(20, msec); // Sleep the task for a short amount of time to
                     // prevent wasted resources.
